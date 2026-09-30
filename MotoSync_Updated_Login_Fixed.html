@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MotoSync - Vehicle & Trip Manager</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root{
+  --primary:#6366f1;--primary-hover:#4f46e5;
+  --primary-gradient:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#d946ef 100%);
+  --bg-gradient:radial-gradient(circle at top left,#1e1b4b,#0f172a,#090d16);
+  --glass-bg:rgba(30,41,59,.75);--glass-border:rgba(255,255,255,.12);
+  --glass-card:rgba(255,255,255,.05);--glass-input:rgba(15,23,42,.6);
+  --text-main:#f8fafc;--text-muted:#94a3b8;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+body{background:var(--bg-gradient);background-attachment:fixed;color:var(--text-main);min-height:100vh;overflow-x:hidden;padding-bottom:30px}
+body.light-theme{
+  --bg-gradient:linear-gradient(135deg,#eef2ff 0%,#f8fafc 50%,#fff 100%);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(71,85,105,.16);
+  --glass-card:rgba(15,23,42,.04);--glass-input:rgba(255,255,255,.95);
+  --text-main:#172033;--text-muted:#64748b;
+}
+.theme-toggle{position:fixed;top:16px;right:16px;width:42px;height:42px;border:1px solid var(--glass-border);border-radius:50%;background:rgba(15,23,42,.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000;backdrop-filter:blur(10px)}
+body.light-theme .theme-toggle{background:rgba(255,255,255,.9);color:#172033}
+.page{display:none;min-height:100vh;animation:fadeIn .25s ease-in-out}.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s ease;text-decoration:none}
+.btn-primary{background:var(--primary-gradient);color:#fff;box-shadow:0 4px 15px rgba(99,102,241,.3)}
+.btn-primary:hover{opacity:.95;transform:translateY(-1px)}
+.btn-outline{background:rgba(255,255,255,.05);color:var(--text-main);border:1px solid var(--glass-border)}
+.btn-outline:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-sm{padding:6px 10px;font-size:11px;border-radius:8px}
+label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.input-wrap{position:relative;margin-bottom:12px}.input-wrap i.icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
+input,select,textarea{width:100%;padding:10px 14px 10px 40px;border:1px solid var(--glass-border);border-radius:12px;font-size:13px;color:var(--text-main);background:var(--glass-input);outline:none}
+input.no-icon,select.no-icon,textarea.no-icon{padding-left:14px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.glass-panel{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;backdrop-filter:blur(20px)}
+.section{background:rgba(30,41,59,.4);border-radius:18px;border:1px solid var(--glass-border);overflow:hidden;margin-bottom:16px}
+body.light-theme .section{background:rgba(255,255,255,.65)}
+.section-header{padding:14px 18px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--glass-border);font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.section-body{padding:16px}
+.tab-bar{display:flex;background:rgba(15,23,42,.8);border:1px solid var(--glass-border);border-radius:16px;padding:4px;gap:4px;overflow-x:auto;margin-top:10px}
+body.light-theme .tab-bar{background:rgba(255,255,255,.85)}
+.tab-btn{flex:1;min-width:60px;padding:8px 4px;background:none;border:none;color:var(--text-muted);border-radius:12px;cursor:pointer;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tab-btn.active{background:var(--primary-gradient);color:#fff}
+.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.doc-card{background:rgba(255,255,255,.03);border:1px solid var(--glass-border);border-radius:16px;padding:14px;text-align:center;position:relative}
+.doc-card.has-file{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.04)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:2000;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#0f172a;border:1px solid var(--glass-border);border-radius:24px;padding:20px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;color:#fff}
+body.light-theme .modal{background:#fff;color:#172033}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(15,23,42,.95);border:1px solid var(--glass-border);color:#fff;padding:10px 20px;border-radius:14px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s ease;max-width:90%;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+#trip-map{width:100%;height:260px;border-radius:14px;margin-bottom:12px;border:1px solid var(--glass-border);z-index:10}
+.plate-badge{background:#facc15;color:#000;font-family:monospace;font-weight:800;padding:4px 10px;border-radius:6px;border:2px solid #000;letter-spacing:1px;display:inline-block;font-size:12px}
+.history-card{background:rgba(255,255,255,.03);border:1px solid var(--glass-border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.auth-message{display:none;font-size:12px;padding:10px 12px;border-radius:10px;margin-bottom:12px}
+.auth-message.show{display:block}.auth-message.error{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.auth-message.success{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.password-row{position:relative}.password-row input{padding-right:44px}.password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--text-muted);cursor:pointer}
+.empty{text-align:center;padding:30px;color:var(--text-muted);font-size:12px}
+@media(max-width:430px){.section-body{padding:12px}.doc-grid{gap:8px}.tab-btn{min-width:58px;font-size:10px}}
+</style>
+</head>
+<body>
+
+<button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+  <i class="fa-solid fa-moon" id="theme-icon"></i>
+</button>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div class="page active" id="page-login">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:380px">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="width:60px;height:60px;background:var(--primary-gradient);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:26px">🚗</div>
+        <h1 style="font-size:24px;font-weight:800">MotoSync</h1>
+        <p style="color:var(--text-muted);font-size:12px;margin-top:4px">Vehicle & Trip Management Platform</p>
+      </div>
+      <div class="glass-panel" style="padding:24px">
+        <h2 style="font-size:18px;margin-bottom:14px">Sign In</h2>
+        <div id="login-message" class="auth-message"></div>
+        <form id="login-form">
+          <div class="input-wrap">
+            <i class="fa-solid fa-envelope icon"></i>
+            <input type="email" id="login-email" placeholder="Email address" autocomplete="username" required/>
+          </div>
+          <div class="input-wrap password-row">
+            <i class="fa-solid fa-lock icon"></i>
+            <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required/>
+            <button type="button" class="password-toggle" onclick="togglePassword('login-password',this)"><i class="fa-solid fa-eye"></i></button>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+        </form>
+        <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="showRegister()">Create New Account</button>
+        <div style="margin-top:14px;padding:10px;border-radius:10px;background:rgba(99,102,241,.08);font-size:10px;color:var(--text-muted)">
+          Demo login: <strong>driver@motosync.com</strong> / <strong>password123</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div class="page" id="page-register">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:380px">
+      <div class="glass-panel" style="padding:24px">
+        <h2 style="font-size:18px;margin-bottom:14px">Create Account</h2>
+        <div id="register-message" class="auth-message"></div>
+        <form id="register-form">
+          <div class="input-wrap"><i class="fa-solid fa-user icon"></i><input type="text" id="reg-name" placeholder="Full Name" autocomplete="name" required/></div>
+          <div class="input-wrap"><i class="fa-solid fa-envelope icon"></i><input type="email" id="reg-email" placeholder="Email address" autocomplete="email" required/></div>
+          <div class="input-wrap"><i class="fa-solid fa-phone icon"></i><input type="tel" id="reg-phone" placeholder="Phone Number" autocomplete="tel"/></div>
+          <div class="input-wrap password-row">
+            <i class="fa-solid fa-lock icon"></i>
+            <input type="password" id="reg-password" placeholder="Password" autocomplete="new-password" minlength="6" required/>
+            <button type="button" class="password-toggle" onclick="togglePassword('reg-password',this)"><i class="fa-solid fa-eye"></i></button>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Register</button>
+        </form>
+        <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="showLogin()">Back to Login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div style="padding:20px;max-width:550px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div><p style="color:var(--text-muted);font-size:11px">Welcome back,</p><h2 id="dash-username" style="font-size:20px">User</h2></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="openProfileModal()"><i class="fa-solid fa-user-gear"></i> Profile</button>
+        <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px">My Garage</h3>
+      <button class="btn btn-primary btn-sm" onclick="openAddVehicleModal()"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
+    </div>
+    <div id="vehicles-list" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div class="page" id="page-detail">
+  <div style="position:sticky;top:0;z-index:100;background:var(--glass-bg);backdrop-filter:blur(15px);padding:14px 18px;border-bottom:1px solid var(--glass-border)">
+    <div style="max-width:550px;margin:0 auto">
+      <button onclick="goTo('page-dashboard')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;margin-bottom:6px"><i class="fa-solid fa-arrow-left"></i> Back to Garage</button>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><div id="detail-emoji" style="font-size:26px">🚗</div><div><h2 id="detail-name" style="font-size:17px">Vehicle Name</h2><div id="detail-plate-wrap" style="margin-top:2px"></div></div></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('home')" id="tab-home"><i class="fa-solid fa-chart-pie"></i> Home</button>
+        <button class="tab-btn" onclick="switchTab('trips')" id="tab-trips"><i class="fa-solid fa-map-location-dot"></i> Trips</button>
+        <button class="tab-btn" onclick="switchTab('services')" id="tab-services"><i class="fa-solid fa-wrench"></i> Services</button>
+        <button class="tab-btn" onclick="switchTab('expenses')" id="tab-expenses"><i class="fa-solid fa-wallet"></i> Expenses</button>
+        <button class="tab-btn" onclick="switchTab('documents')" id="tab-documents"><i class="fa-solid fa-folder-open"></i> Docs</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:550px;margin:0 auto;padding:16px">
+    <div id="tab-content-home">
+      <div class="section"><div class="section-header">Vehicle Overview</div><div class="section-body">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+          <div style="background:rgba(255,255,255,.03);padding:10px;border-radius:12px;border:1px solid var(--glass-border)"><div style="font-size:11px;color:var(--text-muted)">Brand / Make</div><div id="home-v-brand" style="font-weight:700;font-size:14px;margin-top:2px">-</div></div>
+          <div style="background:rgba(255,255,255,.03);padding:10px;border-radius:12px;border:1px solid var(--glass-border)"><div style="font-size:11px;color:var(--text-muted)">Avg Mileage</div><div id="home-v-mileage" style="font-weight:700;font-size:14px;margin-top:2px">- km/L</div></div>
+        </div>
+      </div></div>
+
+      <div class="section"><div class="section-header">Expense Analytics</div><div class="section-body">
+        <div style="display:flex;align-items:center;justify-content:space-around;margin-bottom:12px">
+          <div style="position:relative;width:120px;height:120px">
+            <svg width="120" height="120" viewBox="0 0 36 36">
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#334155" stroke-width="3.8"/>
+              <path id="chart-fuel" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#6366f1" stroke-width="3.8" stroke-dasharray="0,100"/>
+              <path id="chart-service" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="3.8" stroke-dasharray="0,100"/>
+              <path id="chart-general" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f59e0b" stroke-width="3.8" stroke-dasharray="0,100"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:10px;color:var(--text-muted)">Total</span><span id="chart-total" style="font-weight:800;font-size:12px">₹0</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+            <div><span style="display:inline-block;width:10px;height:10px;background:#6366f1;border-radius:2px;margin-right:6px"></span> Fuel: <strong id="sum-fuel">₹0</strong></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:6px"></span> Service: <strong id="sum-service">₹0</strong></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:6px"></span> General: <strong id="sum-general">₹0</strong></div>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="section"><div class="section-header"><span>Nearby Service Centers</span><button class="btn btn-outline btn-sm" onclick="findNearbyServices()"><i class="fa-solid fa-location-crosshairs"></i> Refresh</button></div><div class="section-body" id="home-nearby-list"><p style="font-size:12px;color:var(--text-muted)">Tap refresh to detect centers near your location.</p></div></div>
+    </div>
+
+    <div id="tab-content-trips" style="display:none">
+      <div class="section"><div class="section-header">Trip Route Planner</div><div class="section-body">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Tap 2 points on the map or type Start and Destination manually.</p>
+        <div id="trip-map"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><label>Start Location</label><input type="text" class="no-icon" id="trip-start" placeholder="Tap map or type..."/></div>
+          <div><label>Destination</label><input type="text" class="no-icon" id="trip-dest" placeholder="Tap map or type..."/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          <div><label>Distance (km)</label><input type="number" class="no-icon" id="trip-dist" placeholder="0" oninput="recalcTripCost()"/></div>
+          <div><label>Fuel (Liters)</label><input type="text" class="no-icon" id="trip-fuel-est" placeholder="0 L" readonly style="opacity:.8"/></div>
+          <div><label>Est. Cost (₹)</label><input type="number" class="no-icon" id="trip-cost" placeholder="0"/></div>
+        </div>
+        <div style="margin-bottom:12px"><label>Additional Trip Expenses (₹)</label><input type="number" class="no-icon" id="trip-exp-extra" placeholder="e.g. Tolls, Snacks (0)" oninput="recalcTripCost()"/></div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveTrip()"><i class="fa-solid fa-floppy-disk"></i> Save Trip to Log</button>
+      </div></div>
+      <h3 style="font-size:14px;margin-bottom:10px">Trip History</h3><div id="trips-list"></div>
+    </div>
+
+    <div id="tab-content-services" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:14px">Service & Maintenance Log</h3><button class="btn btn-primary btn-sm" onclick="openAddServiceModal()"><i class="fa-solid fa-plus"></i> Add Service</button></div>
+      <div id="services-list"></div>
+    </div>
+
+    <div id="tab-content-expenses" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:14px">Expense Tracker</h3><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="openAddFuelModal()"><i class="fa-solid fa-gas-pump"></i> + Fuel</button><button class="btn btn-outline btn-sm" onclick="openAddExpenseModal()"><i class="fa-solid fa-receipt"></i> + General</button></div></div>
+      <div id="expenses-list"></div>
+    </div>
+
+    <div id="tab-content-documents" style="display:none">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Store and view digital vehicle records in local storage.</p>
+      <div class="doc-grid">
+        <div class="doc-card" id="doc-card-rc"><i class="fa-solid fa-id-card" style="font-size:22px;color:var(--primary);margin-bottom:6px"></i><div style="font-weight:700;font-size:12px">RC Document</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="doc-status-rc">Not Uploaded</div><div style="margin-top:10px;display:flex;gap:4px;justify-content:center" id="doc-actions-rc"></div></div>
+        <div class="doc-card" id="doc-card-ins"><i class="fa-solid fa-shield-halved" style="font-size:22px;color:var(--green);margin-bottom:6px"></i><div style="font-weight:700;font-size:12px">Insurance</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="doc-status-ins">Not Uploaded</div><div style="margin-top:10px;display:flex;gap:4px;justify-content:center" id="doc-actions-ins"></div></div>
+        <div class="doc-card" id="doc-card-puc"><i class="fa-solid fa-leaf" style="font-size:22px;color:var(--amber);margin-bottom:6px"></i><div style="font-weight:700;font-size:12px">PUC Certificate</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="doc-status-puc">Not Uploaded</div><div style="margin-top:10px;display:flex;gap:4px;justify-content:center" id="doc-actions-puc"></div></div>
+        <div class="doc-card" id="doc-card-lic"><i class="fa-solid fa-address-card" style="font-size:22px;color:var(--blue);margin-bottom:6px"></i><div style="font-weight:700;font-size:12px">Driving License</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="doc-status-lic">Not Uploaded</div><div style="margin-top:10px;display:flex;gap:4px;justify-content:center" id="doc-actions-lic"></div></div>
+      </div>
+      <input type="file" id="hidden-doc-file" accept="image/*,application/pdf" style="display:none" onchange="handleDocSave(this)"/>
+    </div>
+  </div>
+</div>
+
+<!-- VEHICLE MODAL -->
+<div class="modal-overlay" id="add-vehicle-modal"><div class="modal">
+  <h3 style="margin-bottom:12px" id="modal-v-title">Add Vehicle</h3>
+  <input type="hidden" id="edit-v-id"/>
+  <label>Vehicle Type</label><select class="no-icon" id="add-v-type" style="margin-bottom:10px"><option value="car">Car 🚗</option><option value="bike">Motorcycle / Scooter 🏍️</option></select>
+  <label>Brand / Make</label><input type="text" class="no-icon" id="add-v-brand" placeholder="e.g. Honda, Hyundai, Suzuki" style="margin-bottom:10px"/>
+  <label>Model Name</label><input type="text" class="no-icon" id="add-v-name" placeholder="e.g. City, Creta, Swift" style="margin-bottom:10px"/>
+  <label>Vehicle Number Plate</label><input type="text" class="no-icon" id="add-v-plate" placeholder="e.g. KA 01 AB 1234" style="margin-bottom:10px"/>
+  <label>Average Mileage (km / Litre)</label><input type="number" class="no-icon" id="add-v-mileage" placeholder="e.g. 15" value="15" style="margin-bottom:18px"/>
+  <button class="btn btn-primary" style="width:100%" onclick="saveVehicle()">Save Vehicle</button><button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="closeModal('add-vehicle-modal')">Cancel</button>
+</div></div>
+
+<!-- SERVICE MODAL -->
+<div class="modal-overlay" id="add-service-modal"><div class="modal">
+  <h3 style="margin-bottom:12px" id="modal-service-title">Add Service History</h3><input type="hidden" id="edit-service-id"/>
+  <label>Service Center Name</label><input type="text" class="no-icon" id="srv-center" placeholder="e.g. Official Authorized Service" style="margin-bottom:10px"/>
+  <label>Service Type / Details</label><input type="text" class="no-icon" id="srv-desc" placeholder="e.g. Oil Change, Wheel Balancing" style="margin-bottom:10px"/>
+  <label>Cost (₹)</label><input type="number" class="no-icon" id="srv-cost" placeholder="0.00" style="margin-bottom:10px"/>
+  <label>Date</label><input type="date" class="no-icon" id="srv-date" style="margin-bottom:18px"/>
+  <button class="btn btn-primary" style="width:100%" onclick="saveService()">Save Service Record</button><button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="closeModal('add-service-modal')">Cancel</button>
+</div></div>
+
+<!-- GENERAL EXPENSE -->
+<div class="modal-overlay" id="add-expense-modal"><div class="modal">
+  <h3 style="margin-bottom:12px" id="modal-exp-title">Add General Expense</h3><input type="hidden" id="edit-exp-id"/>
+  <label>Category / Title</label><input type="text" class="no-icon" id="exp-title" placeholder="e.g. Parking, Toll, Wash" style="margin-bottom:10px"/>
+  <label>Amount (₹)</label><input type="number" class="no-icon" id="exp-amount" placeholder="0.00" style="margin-bottom:10px"/>
+  <label>Date</label><input type="date" class="no-icon" id="exp-date" style="margin-bottom:18px"/>
+  <button class="btn btn-primary" style="width:100%" onclick="saveExpense('general')">Save Expense</button><button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="closeModal('add-expense-modal')">Cancel</button>
+</div></div>
+
+<!-- FUEL -->
+<div class="modal-overlay" id="add-fuel-modal"><div class="modal">
+  <h3 style="margin-bottom:12px" id="modal-fuel-title">Log Fuel Fill-Up</h3><input type="hidden" id="edit-fuel-id"/>
+  <label>Total Amount (₹)</label><input type="number" class="no-icon" id="fuel-amount" placeholder="0.00" style="margin-bottom:10px"/>
+  <label>Fuel Price / Litre (₹)</label><input type="number" class="no-icon" id="fuel-price" placeholder="100.00" value="102" style="margin-bottom:10px"/>
+  <label>Odometer Reading (km)</label><input type="number" class="no-icon" id="fuel-odo" placeholder="e.g. 12450" style="margin-bottom:10px"/>
+  <label>Date</label><input type="date" class="no-icon" id="fuel-date" style="margin-bottom:18px"/>
+  <button class="btn btn-primary" style="width:100%" onclick="saveExpense('fuel')">Save Fuel Entry</button><button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="closeModal('add-fuel-modal')">Cancel</button>
+</div></div>
+
+<!-- PROFILE -->
+<div class="modal-overlay" id="profile-modal"><div class="modal">
+  <h3 style="margin-bottom:12px">User Profile Settings</h3>
+  <label>Full Name</label><input type="text" class="no-icon" id="prof-name" style="margin-bottom:10px"/>
+  <label>Email Address</label><input type="email" class="no-icon" id="prof-email" readonly style="opacity:.7;margin-bottom:10px"/>
+  <label>Phone Number</label><input type="tel" class="no-icon" id="prof-phone" style="margin-bottom:10px"/>
+  <label>Default Location</label><input type="text" class="no-icon" id="prof-city" placeholder="e.g. Bengaluru, India" style="margin-bottom:18px"/>
+  <button class="btn btn-primary" style="width:100%" onclick="saveProfile()">Update Profile</button><button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="closeModal('profile-modal')">Close</button>
+</div></div>
+
+<!-- DOCUMENT VIEW -->
+<div class="modal-overlay" id="doc-view-modal"><div class="modal" style="text-align:center">
+  <h3 style="margin-bottom:12px" id="doc-view-title">Document Preview</h3>
+  <div id="doc-view-container" style="max-height:60vh;overflow:auto;margin-bottom:16px"></div>
+  <button class="btn btn-outline" style="width:100%" onclick="closeModal('doc-view-modal')">Close</button>
+</div></div>
+
+<script>
+'use strict';
+
+/* ---------------- STATE ---------------- */
+function readJSON(key, fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    if(!raw)return fallback;
+    const parsed=JSON.parse(raw);
+    return parsed ?? fallback;
+  }catch(e){
+    console.warn('Could not read localStorage key:',key,e);
+    return fallback;
+  }
+}
+
+let state={
+  currentUser:readJSON('ms_session',null),
+  users:readJSON('ms_users',[]),
+  vehicles:readJSON('ms_vehicles',[]),
+  trips:readJSON('ms_trips',[]),
+  services:readJSON('ms_services',[]),
+  expenses:readJSON('ms_expenses',[]),
+  docs:readJSON('ms_docs',{}),
+  currentVehicleId:null,
+  activeDocType:null,
+  editingTripId:null
+};
+
+if(!Array.isArray(state.users))state.users=[];
+if(!Array.isArray(state.vehicles))state.vehicles=[];
+if(!Array.isArray(state.trips))state.trips=[];
+if(!Array.isArray(state.services))state.services=[];
+if(!Array.isArray(state.expenses))state.expenses=[];
+if(!state.docs || typeof state.docs!=='object')state.docs={};
+
+/* Create demo account only if there are no accounts. */
+if(state.users.length===0){
+  state.users.push({
+    uid:'u_demo',
+    name:'Alex Driver',
+    email:'driver@motosync.com',
+    phone:'+91 9876543210',
+    pass:'password123',
+    city:'Bengaluru'
+  });
+  localStorage.setItem('ms_users',JSON.stringify(state.users));
+}
+
+/* Remove invalid/stale session. */
+if(state.currentUser && !state.users.some(u=>u.uid===state.currentUser.uid)){
+  state.currentUser=null;
+  localStorage.removeItem('ms_session');
+}
+
+function saveState(){
+  localStorage.setItem('ms_session',state.currentUser?JSON.stringify(state.currentUser):'');
+  localStorage.setItem('ms_users',JSON.stringify(state.users));
+  localStorage.setItem('ms_vehicles',JSON.stringify(state.vehicles));
+  localStorage.setItem('ms_trips',JSON.stringify(state.trips));
+  localStorage.setItem('ms_services',JSON.stringify(state.services));
+  localStorage.setItem('ms_expenses',JSON.stringify(state.expenses));
+  localStorage.setItem('ms_docs',JSON.stringify(state.docs));
+}
+
+/* ---------------- UI ---------------- */
+function goTo(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const page=document.getElementById(pageId);
+  if(page)page.classList.add('active');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(window.toastTimer);
+  window.toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function showAuthMessage(id,msg,type='error'){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=msg;
+  el.className='auth-message show '+type;
+}
+
+function clearAuthMessages(){
+  ['login-message','register-message'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.className='auth-message';
+  });
+}
+
+function showLogin(){
+  clearAuthMessages();
+  goTo('page-login');
+  setTimeout(()=>document.getElementById('login-email')?.focus(),50);
+}
+
+function showRegister(){
+  clearAuthMessages();
+  goTo('page-register');
+  setTimeout(()=>document.getElementById('reg-name')?.focus(),50);
+}
+
+function togglePassword(inputId,button){
+  const input=document.getElementById(inputId);
+  if(!input)return;
+  input.type=input.type==='password'?'text':'password';
+  button.innerHTML=input.type==='password'
+    ?'<i class="fa-solid fa-eye"></i>'
+    :'<i class="fa-solid fa-eye-slash"></i>';
+}
+
+function toggleTheme(){
+  document.body.classList.toggle('light-theme');
+  const light=document.body.classList.contains('light-theme');
+  document.getElementById('theme-icon').className=light?'fa-solid fa-sun':'fa-solid fa-moon';
+  localStorage.setItem('ms_theme',light?'light':'dark');
+}
+
+function loadTheme(){
+  if(localStorage.getItem('ms_theme')==='light'){
+    document.body.classList.add('light-theme');
+    document.getElementById('theme-icon').className='fa-solid fa-sun';
+  }
+}
+
+function openModal(id){document.getElementById(id)?.classList.add('open')}
+function closeModal(id){document.getElementById(id)?.classList.remove('open')}
+
+/* ---------------- AUTH ---------------- */
+function normalizeEmail(email){return String(email||'').trim().toLowerCase()}
+
+function doLogin(){
+  const email=normalizeEmail(document.getElementById('login-email').value);
+  const pass=document.getElementById('login-password').value;
+
+  if(!email||!pass){
+    showAuthMessage('login-message','Please enter your email and password.','error');
+    return;
+  }
+
+  const user=state.users.find(u=>normalizeEmail(u.email)===email && String(u.pass)===String(pass));
+
+  if(!user){
+    showAuthMessage('login-message','Invalid email or password. Use the registered account details.','error');
+    return;
+  }
+
+  /* Store a clean copy of the account as the session. */
+  state.currentUser={...user};
+  saveState();
+
+  document.getElementById('login-password').value='';
+  showToast('Login successful!');
+  initDashboard();
+}
+
+function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=normalizeEmail(document.getElementById('reg-email').value);
+  const phone=document.getElementById('reg-phone').value.trim();
+  const pass=document.getElementById('reg-password').value;
+
+  if(!name||!email||!pass){
+    showAuthMessage('register-message','Please fill all required fields.','error');
+    return;
+  }
+
+  if(pass.length<6){
+    showAuthMessage('register-message','Password must contain at least 6 characters.','error');
+    return;
+  }
+
+  if(state.users.some(u=>normalizeEmail(u.email)===email)){
+    showAuthMessage('register-message','This email is already registered. Please login instead.','error');
+    return;
+  }
+
+  const user={
+    uid:'u_'+Date.now(),
+    name,email,phone,pass,city:''
+  };
+
+  state.users.push(user);
+  state.currentUser={...user};
+  saveState();
+
+  document.getElementById('register-form').reset();
+  showToast('Account created successfully!');
+  initDashboard();
+}
+
+function doLogout(){
+  state.currentUser=null;
+  state.currentVehicleId=null;
+  localStorage.removeItem('ms_session');
+  closeAllModals();
+  document.getElementById('login-password').value='';
+  showLogin();
+  showToast('Logged out successfully');
+}
+
+function closeAllModals(){
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));
+}
+
+function openProfileModal(){
+  if(!state.currentUser)return;
+  document.getElementById('prof-name').value=state.currentUser.name||'';
+  document.getElementById('prof-email').value=state.currentUser.email||'';
+  document.getElementById('prof-phone').value=state.currentUser.phone||'';
+  document.getElementById('prof-city').value=state.currentUser.city||'';
+  openModal('profile-modal');
+}
+
+function saveProfile(){
+  if(!state.currentUser)return;
+
+  state.currentUser.name=document.getElementById('prof-name').value.trim();
+  state.currentUser.phone=document.getElementById('prof-phone').value.trim();
+  state.currentUser.city=document.getElementById('prof-city').value.trim();
+
+  const idx=state.users.findIndex(u=>u.uid===state.currentUser.uid);
+  if(idx!==-1)state.users[idx]={...state.users[idx],...state.currentUser};
+
+  saveState();
+  closeModal('profile-modal');
+  document.getElementById('dash-username').textContent=state.currentUser.name||'User';
+  showToast('Profile updated successfully!');
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function initDashboard(){
+  if(!state.currentUser){
+    showLogin();
+    return;
+  }
+  document.getElementById('dash-username').textContent=state.currentUser.name||'User';
+  renderVehicles();
+  goTo('page-dashboard');
+}
+
+function renderVehicles(){
+  const list=document.getElementById('vehicles-list');
+  const userVehicles=state.vehicles.filter(v=>v.userId===state.currentUser.uid);
+
+  if(userVehicles.length===0){
+    list.innerHTML='<div class="empty">No vehicles added.<br>Tap <strong>+ Add Vehicle</strong> to get started.</div>';
+    return;
+  }
+
+  list.innerHTML=userVehicles.map(v=>`
+    <div class="glass-panel" style="padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openVehicleDetail('${escapeAttr(v.id)}')">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <div style="font-size:28px">${v.type==='car'?'🚗':'🏍️'}</div>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(v.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(v.brand)} • ${v.mileage||15} km/L</div>
+          ${v.plate?`<div style="margin-top:4px"><span class="plate-badge">${escapeHtml(v.plate)}</span></div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
+        <button class="btn btn-outline btn-sm" onclick="editVehicle('${escapeAttr(v.id)}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${escapeAttr(v.id)}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openAddVehicleModal(){
+  document.getElementById('modal-v-title').textContent='Add Vehicle';
+  document.getElementById('edit-v-id').value='';
+  document.getElementById('add-v-type').value='car';
+  document.getElementById('add-v-brand').value='';
+  document.getElementById('add-v-name').value='';
+  document.getElementById('add-v-plate').value='';
+  document.getElementById('add-v-mileage').value='15';
+  openModal('add-vehicle-modal');
+}
+
+function editVehicle(vId){
+  const v=state.vehicles.find(item=>item.id===vId && item.userId===state.currentUser.uid);
+  if(!v)return;
+  document.getElementById('modal-v-title').textContent='Edit Vehicle';
+  document.getElementById('edit-v-id').value=v.id;
+  document.getElementById('add-v-type').value=v.type||'car';
+  document.getElementById('add-v-brand').value=v.brand||'';
+  document.getElementById('add-v-name').value=v.name||'';
+  document.getElementById('add-v-plate').value=v.plate||'';
+  document.getElementById('add-v-mileage').value=v.mileage||15;
+  openModal('add-vehicle-modal');
+}
+
+function saveVehicle(){
+  if(!state.currentUser)return;
+
+  const editId=document.getElementById('edit-v-id').value;
+  const type=document.getElementById('add-v-type').value;
+  const brand=document.getElementById('add-v-brand').value.trim();
+  const name=document.getElementById('add-v-name').value.trim();
+  const plate=document.getElementById('add-v-plate').value.trim().toUpperCase();
+  const mileage=parseFloat(document.getElementById('add-v-mileage').value)||15;
+
+  if(!brand||!name){
+    showToast('Please enter brand and model name');
+    return;
+  }
+
+  if(editId){
+    const idx=state.vehicles.findIndex(v=>v.id===editId && v.userId===state.currentUser.uid);
+    if(idx!==-1)state.vehicles[idx]={...state.vehicles[idx],type,brand,name,plate,mileage};
+  }else{
+    state.vehicles.push({id:'v_'+Date.now(),userId:state.currentUser.uid,type,brand,name,plate,mileage});
+  }
+
+  saveState();
+  closeModal('add-vehicle-modal');
+  renderVehicles();
+  showToast('Vehicle saved!');
+}
+
+function deleteVehicle(vId){
+  if(!confirm('Are you sure you want to remove this vehicle?'))return;
+
+  state.vehicles=state.vehicles.filter(v=>!(v.id===vId && v.userId===state.currentUser.uid));
+  state.trips=state.trips.filter(t=>t.vehicleId!==vId);
+  state.services=state.services.filter(s=>s.vehicleId!==vId);
+  state.expenses=state.expenses.filter(e=>e.vehicleId!==vId);
+
+  Object.keys(state.docs).forEach(k=>{
+    if(k.startsWith(vId+'_'))delete state.docs[k];
+  });
+
+  saveState();
+  renderVehicles();
+  showToast('Vehicle removed');
+}
+
+/* ---------------- VEHICLE DETAILS ---------------- */
+function openVehicleDetail(vId){
+  const vehicle=state.vehicles.find(v=>v.id===vId && v.userId===state.currentUser.uid);
+  if(!vehicle)return;
+
+  state.currentVehicleId=vId;
+
+  document.getElementById('detail-name').textContent=vehicle.name;
+  document.getElementById('detail-emoji').textContent=vehicle.type==='car'?'🚗':'🏍️';
+  document.getElementById('detail-plate-wrap').innerHTML=vehicle.plate?`<span class="plate-badge">${escapeHtml(vehicle.plate)}</span>`:'';
+  document.getElementById('home-v-brand').textContent=vehicle.brand||'-';
+  document.getElementById('home-v-mileage').textContent=`${vehicle.mileage||15} km/L`;
+
+  switchTab('home');
+  goTo('page-detail');
+}
+
+function switchTab(tab){
+  ['home','trips','services','expenses','documents'].forEach(t=>{
+    document.getElementById(`tab-content-${t}`).style.display=t===tab?'block':'none';
+    document.getElementById(`tab-${t}`)?.classList.toggle('active',t===tab);
+  });
+
+  if(tab==='home')renderHomeTab();
+  if(tab==='trips')initTripMapAndTab();
+  if(tab==='services')renderServices();
+  if(tab==='expenses')renderExpenses();
+  if(tab==='documents')renderDocuments();
+}
+
+/* ---------------- HOME ---------------- */
+function renderHomeTab(){
+  const vId=state.currentVehicleId;
+
+  const fuelTotal=state.expenses.filter(e=>e.vehicleId===vId&&e.cat==='fuel').reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);
+  const serviceTotal=state.services.filter(s=>s.vehicleId===vId).reduce((sum,s)=>sum+(parseFloat(s.cost)||0),0);
+  const generalTotal=state.expenses.filter(e=>e.vehicleId===vId&&e.cat==='general').reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);
+  const grandTotal=fuelTotal+serviceTotal+generalTotal;
+
+  document.getElementById('sum-fuel').textContent=`₹${fuelTotal.toFixed(0)}`;
+  document.getElementById('sum-service').textContent=`₹${serviceTotal.toFixed(0)}`;
+  document.getElementById('sum-general').textContent=`₹${generalTotal.toFixed(0)}`;
+  document.getElementById('chart-total').textContent=`₹${grandTotal.toFixed(0)}`;
+
+  const fPct=grandTotal?(fuelTotal/grandTotal)*100:0;
+  const sPct=grandTotal?(serviceTotal/grandTotal)*100:0;
+  const gPct=grandTotal?(generalTotal/grandTotal)*100:0;
+
+  document.getElementById('chart-fuel').setAttribute('stroke-dasharray',`${fPct},100`);
+  document.getElementById('chart-service').setAttribute('stroke-dasharray',`${sPct},100`);
+  document.getElementById('chart-service').setAttribute('stroke-dashoffset',`-${fPct}`);
+  document.getElementById('chart-general').setAttribute('stroke-dasharray',`${gPct},100`);
+  document.getElementById('chart-general').setAttribute('stroke-dashoffset',`-${fPct+sPct}`);
+
+  findNearbyServices();
+}
+
+function findNearbyServices(){
+  const list=document.getElementById('home-nearby-list');
+  list.innerHTML='<p style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i> Locating service centers...</p>';
+
+  setTimeout(()=>{
+    list.innerHTML=`
+      <div class="history-card" style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700;font-size:13px">SpeedyCare Express Station</div><div style="font-size:11px;color:var(--text-muted)">Nearby service center</div></div>
+        <a href="https://maps.google.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm"><i class="fa-solid fa-diamond-turn-right"></i> Navigate</a>
+      </div>
+      <div class="history-card" style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700;font-size:13px">MasterMotors Authorized Hub</div><div style="font-size:11px;color:var(--text-muted)">Nearby service center</div></div>
+        <a href="https://maps.google.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm"><i class="fa-solid fa-diamond-turn-right"></i> Navigate</a>
+      </div>`;
+  },400);
+}
+
+/* ---------------- TRIPS ---------------- */
+let map=null,startMarker=null,destMarker=null;
+
+function initTripMapAndTab(){
+  renderTrips();
+
+  setTimeout(()=>{
+    const mapEl=document.getElementById('trip-map');
+    if(!mapEl||typeof L==='undefined')return;
+
+    if(!map){
+      map=L.map('trip-map').setView([12.9716,77.5946],12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        maxZoom:18,attribution:'© OpenStreetMap'
+      }).addTo(map);
+      map.on('click',onMapClick);
+    }else{
+      map.invalidateSize();
+    }
+  },200);
+}
+
+function onMapClick(e){
+  const lat=e.latlng.lat.toFixed(4),lng=e.latlng.lng.toFixed(4);
+
+  if(!startMarker){
+    startMarker=L.marker(e.latlng).addTo(map).bindPopup('Start Point').openPopup();
+    document.getElementById('trip-start').value=`${lat}, ${lng}`;
+  }else if(!destMarker){
+    destMarker=L.marker(e.latlng).addTo(map).bindPopup('Destination Point').openPopup();
+    document.getElementById('trip-dest').value=`${lat}, ${lng}`;
+    calculateMapDistance();
+  }else{
+    map.removeLayer(startMarker);map.removeLayer(destMarker);
+    startMarker=L.marker(e.latlng).addTo(map).bindPopup('Start Point').openPopup();
+    destMarker=null;
+    document.getElementById('trip-start').value=`${lat}, ${lng}`;
+    document.getElementById('trip-dest').value='';
+    document.getElementById('trip-dist').value='';
+    document.getElementById('trip-fuel-est').value='';
+  }
+}
+
+function calculateMapDistance(){
+  if(startMarker&&destMarker){
+    const p1=startMarker.getLatLng(),p2=destMarker.getLatLng();
+    const dKm=(p1.distanceTo(p2)/1000).toFixed(1);
+    document.getElementById('trip-dist').value=dKm;
+    recalcTripCost();
+  }
+}
+
+function recalcTripCost(){
+  const dist=parseFloat(document.getElementById('trip-dist').value)||0;
+  const vehicle=state.vehicles.find(v=>v.id===state.currentVehicleId);
+  const mileage=vehicle?.mileage||15;
+  const fuelPrice=102;
+  const fuelLitres=dist/mileage;
+  const extra=parseFloat(document.getElementById('trip-exp-extra').value)||0;
+
+  document.getElementById('trip-fuel-est').value=`${fuelLitres.toFixed(1)} L`;
+  document.getElementById('trip-cost').value=Math.round(fuelLitres*fuelPrice)+extra;
+}
+
+function clearTripForm(){
+  document.getElementById('trip-start').value='';
+  document.getElementById('trip-dest').value='';
+  document.getElementById('trip-dist').value='';
+  document.getElementById('trip-fuel-est').value='';
+  document.getElementById('trip-cost').value='';
+  document.getElementById('trip-exp-extra').value='';
+  state.editingTripId=null;
+
+  if(map&&startMarker){map.removeLayer(startMarker);startMarker=null}
+  if(map&&destMarker){map.removeLayer(destMarker);destMarker=null}
+}
+
+function saveTrip(){
+  const start=document.getElementById('trip-start').value.trim();
+  const dest=document.getElementById('trip-dest').value.trim();
+  const dist=parseFloat(document.getElementById('trip-dist').value)||0;
+  const cost=parseFloat(document.getElementById('trip-cost').value)||0;
+  const extra=parseFloat(document.getElementById('trip-exp-extra').value)||0;
+
+  if(!start||!dest)return showToast('Please set start and destination');
+  if(dist<=0)return showToast('Please enter a valid distance');
+
+  if(state.editingTripId){
+    const idx=state.trips.findIndex(t=>t.id===state.editingTripId&&t.vehicleId===state.currentVehicleId);
+    if(idx!==-1)state.trips[idx]={...state.trips[idx],start,dest,dist,cost,extra};
+  }else{
+    state.trips.push({
+      id:'t_'+Date.now(),vehicleId:state.currentVehicleId,start,dest,dist,cost,extra,
+      date:new Date().toISOString().split('T')[0]
+    });
+  }
+
+  saveState();renderTrips();clearTripForm();showToast('Trip logged successfully!');
+}
+
+function renderTrips(){
+  const list=document.getElementById('trips-list');
+  const trips=state.trips.filter(t=>t.vehicleId===state.currentVehicleId);
+
+  if(!trips.length){
+    list.innerHTML='<p style="font-size:12px;color:var(--text-muted)">No trips logged yet.</p>';
+    return;
+  }
+
+  list.innerHTML=trips.slice().reverse().map(t=>`
+    <div class="history-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:13px;word-break:break-word">${escapeHtml(t.start)} ➔ ${escapeHtml(t.dest)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(t.date||'Recent')} • Distance: ${t.dist} km</div>
+          ${t.extra?`<div style="font-size:10px;color:var(--amber);margin-top:2px">Extra Expenses: ₹${t.extra}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:var(--green)">₹${t.cost}</div><div style="margin-top:6px;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="editTrip('${escapeAttr(t.id)}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deleteTrip('${escapeAttr(t.id)}')"><i class="fa-solid fa-trash"></i></button></div></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editTrip(tId){
+  const t=state.trips.find(item=>item.id===tId&&item.vehicleId===state.currentVehicleId);
+  if(!t)return;
+  state.editingTripId=t.id;
+  document.getElementById('trip-start').value=t.start;
+  document.getElementById('trip-dest').value=t.dest;
+  document.getElementById('trip-dist').value=t.dist;
+  document.getElementById('trip-cost').value=t.cost;
+  document.getElementById('trip-exp-extra').value=t.extra||0;
+  recalcTripCost();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function deleteTrip(tId){
+  if(!confirm('Delete trip from log?'))return;
+  state.trips=state.trips.filter(t=>t.id!==tId);
+  saveState();renderTrips();showToast('Trip removed');
+}
+
+/* ---------------- SERVICES ---------------- */
+function renderServices(){
+  const list=document.getElementById('services-list');
+  const services=state.services.filter(s=>s.vehicleId===state.currentVehicleId);
+
+  if(!services.length){
+    list.innerHTML='<p style="font-size:12px;color:var(--text-muted)">No service logs present.</p>';
+    return;
+  }
+
+  list.innerHTML=services.slice().reverse().map(s=>`
+    <div class="history-card" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div><div style="font-weight:700;font-size:13px">${escapeHtml(s.center)}</div><div style="font-size:11px;color:var(--text-muted)">${escapeHtml(s.desc)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px">${escapeHtml(s.date)}</div></div>
+      <div style="text-align:right"><div style="font-weight:800;color:var(--green)">₹${s.cost}</div><div style="margin-top:6px;display:flex;gap:4px;justify-content:flex-end"><button class="btn btn-outline btn-sm" onclick="editService('${escapeAttr(s.id)}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deleteService('${escapeAttr(s.id)}')"><i class="fa-solid fa-trash"></i></button></div></div>
+    </div>
+  `).join('');
+}
+
+function openAddServiceModal(){
+  document.getElementById('modal-service-title').textContent='Add Service History';
+  document.getElementById('edit-service-id').value='';
+  document.getElementById('srv-center').value='';
+  document.getElementById('srv-desc').value='';
+  document.getElementById('srv-cost').value='';
+  document.getElementById('srv-date').value=new Date().toISOString().split('T')[0];
+  openModal('add-service-modal');
+}
+
+function editService(sId){
+  const s=state.services.find(item=>item.id===sId&&item.vehicleId===state.currentVehicleId);
+  if(!s)return;
+  document.getElementById('modal-service-title').textContent='Edit Service Log';
+  document.getElementById('edit-service-id').value=s.id;
+  document.getElementById('srv-center').value=s.center;
+  document.getElementById('srv-desc').value=s.desc;
+  document.getElementById('srv-cost').value=s.cost;
+  document.getElementById('srv-date').value=s.date;
+  openModal('add-service-modal');
+}
+
+function saveService(){
+  const editId=document.getElementById('edit-service-id').value;
+  const center=document.getElementById('srv-center').value.trim();
+  const desc=document.getElementById('srv-desc').value.trim();
+  const cost=parseFloat(document.getElementById('srv-cost').value)||0;
+  const date=document.getElementById('srv-date').value||new Date().toISOString().split('T')[0];
+
+  if(!center||!desc)return showToast('Please enter service details');
+
+  if(editId){
+    const idx=state.services.findIndex(s=>s.id===editId&&s.vehicleId===state.currentVehicleId);
+    if(idx!==-1)state.services[idx]={...state.services[idx],center,desc,cost,date};
+  }else{
+    state.services.push({id:'s_'+Date.now(),vehicleId:state.currentVehicleId,center,desc,cost,date});
+  }
+
+  saveState();closeModal('add-service-modal');renderServices();showToast('Service record saved!');
+}
+
+function deleteService(sId){
+  if(!confirm('Delete service record?'))return;
+  state.services=state.services.filter(s=>s.id!==sId);
+  saveState();renderServices();showToast('Service deleted');
+}
+
+/* ---------------- EXPENSES ---------------- */
+function renderExpenses(){
+  const list=document.getElementById('expenses-list');
+  const exps=state.expenses.filter(e=>e.vehicleId===state.currentVehicleId);
+
+  if(!exps.length){
+    list.innerHTML='<p style="font-size:12px;color:var(--text-muted)">No expenses recorded.</p>';
+    return;
+  }
+
+  list.innerHTML=exps.slice().reverse().map(e=>{
+    const isFuel=e.cat==='fuel';
+    const details=isFuel
+      ? `Odo: ${escapeHtml(e.odo||'-')} km • @ ₹${e.price||0}/L`
+      : '';
+    return `
+      <div class="history-card" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${isFuel?'rgba(99,102,241,.2)':'rgba(245,158,11,.2)'};color:${isFuel?'#818cf8':'#fbbf24'}">${isFuel?'FUEL':'GENERAL'}</span>
+            <span style="font-weight:700;font-size:13px">${escapeHtml(e.title)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${details}${e.date?` • ${escapeHtml(e.date)}`:''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:var(--green)">₹${e.amount}</div><div style="margin-top:6px;display:flex;gap:4px;justify-content:flex-end"><button class="btn btn-outline btn-sm" onclick="editExpense('${escapeAttr(e.id)}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deleteExpense('${escapeAttr(e.id)}')"><i class="fa-solid fa-trash"></i></button></div></div>
+      </div>`;
+  }).join('');
+}
+
+function openAddFuelModal(){
+  document.getElementById('modal-fuel-title').textContent='Log Fuel Fill-Up';
+  document.getElementById('edit-fuel-id').value='';
+  document.getElementById('fuel-amount').value='';
+  document.getElementById('fuel-price').value='102';
+  document.getElementById('fuel-odo').value='';
+  document.getElementById('fuel-date').value=new Date().toISOString().split('T')[0];
+  openModal('add-fuel-modal');
+}
+
+function openAddExpenseModal(){
+  document.getElementById('modal-exp-title').textContent='Add General Expense';
+  document.getElementById('edit-exp-id').value='';
+  document.getElementById('exp-title').value='';
+  document.getElementById('exp-amount').value='';
+  document.getElementById('exp-date').value=new Date().toISOString().split('T')[0];
+  openModal('add-expense-modal');
+}
+
+function saveExpense(category){
+  if(category==='fuel'){
+    const editId=document.getElementById('edit-fuel-id').value;
+    const amount=parseFloat(document.getElementById('fuel-amount').value)||0;
+    const price=parseFloat(document.getElementById('fuel-price').value)||0;
+    const odo=document.getElementById('fuel-odo').value.trim();
+    const date=document.getElementById('fuel-date').value||new Date().toISOString().split('T')[0];
+
+    if(!amount)return showToast('Please enter fuel amount');
+
+    if(editId){
+      const idx=state.expenses.findIndex(e=>e.id===editId&&e.vehicleId===state.currentVehicleId);
+      if(idx!==-1)state.expenses[idx]={...state.expenses[idx],amount,price,odo,date};
+    }else{
+      state.expenses.push({id:'e_'+Date.now(),vehicleId:state.currentVehicleId,cat:'fuel',title:'Fuel Fill-up',amount,price,odo,date});
+    }
+    closeModal('add-fuel-modal');
+  }else{
+    const editId=document.getElementById('edit-exp-id').value;
+    const title=document.getElementById('exp-title').value.trim();
+    const amount=parseFloat(document.getElementById('exp-amount').value)||0;
+    const date=document.getElementById('exp-date').value||new Date().toISOString().split('T')[0];
+
+    if(!title||!amount)return showToast('Please fill title and amount');
+
+    if(editId){
+      const idx=state.expenses.findIndex(e=>e.id===editId&&e.vehicleId===state.currentVehicleId);
+      if(idx!==-1)state.expenses[idx]={...state.expenses[idx],title,amount,date};
+    }else{
+      state.expenses.push({id:'e_'+Date.now(),vehicleId:state.currentVehicleId,cat:'general',title,amount,date});
+    }
+    closeModal('add-expense-modal');
+  }
+
+  saveState();renderExpenses();renderHomeTab();showToast('Expense recorded!');
+}
+
+function editExpense(eId){
+  const e=state.expenses.find(item=>item.id===eId&&item.vehicleId===state.currentVehicleId);
+  if(!e)return;
+
+  if(e.cat==='fuel'){
+    document.getElementById('edit-fuel-id').value=e.id;
+    document.getElementById('fuel-amount').value=e.amount;
+    document.getElementById('fuel-price').value=e.price||102;
+    document.getElementById('fuel-odo').value=e.odo||'';
+    document.getElementById('fuel-date').value=e.date||'';
+    openModal('add-fuel-modal');
+  }else{
+    document.getElementById('edit-exp-id').value=e.id;
+    document.getElementById('exp-title').value=e.title;
+    document.getElementById('exp-amount').value=e.amount;
+    document.getElementById('exp-date').value=e.date||'';
+    openModal('add-expense-modal');
+  }
+}
+
+function deleteExpense(eId){
+  if(!confirm('Delete expense item?'))return;
+  state.expenses=state.expenses.filter(e=>e.id!==eId);
+  saveState();renderExpenses();renderHomeTab();showToast('Expense deleted');
+}
+
+/* ---------------- DOCUMENTS ---------------- */
+function triggerDocUpload(type){
+  state.activeDocType=type;
+  const input=document.getElementById('hidden-doc-file');
+  input.value='';
+  input.click();
+}
+
+function handleDocSave(input){
+  if(!input.files||!input.files[0])return;
+
+  const file=input.files[0];
+  const key=`${state.currentVehicleId}_${state.activeDocType}`;
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    state.docs[key]={name:file.name,type:file.type,data:e.target.result};
+    saveState();renderDocuments();showToast('Document uploaded!');
+    input.value='';
+  };
+  reader.onerror=()=>showToast('Could not read document');
+  reader.readAsDataURL(file);
+}
+
+function deleteDoc(type){
+  if(!confirm('Remove document?'))return;
+  delete state.docs[`${state.currentVehicleId}_${type}`];
+  saveState();renderDocuments();showToast('Document removed');
+}
+
+function viewDoc(type){
+  const doc=state.docs[`${state.currentVehicleId}_${type}`];
+  if(!doc)return;
+
+  const container=document.getElementById('doc-view-container');
+  if((doc.type||'').includes('pdf')){
+    container.innerHTML=`<embed src="${doc.data}" type="application/pdf" width="100%" height="350px"/>`;
+  }else{
+    container.innerHTML=`<img src="${doc.data}" alt="Document" style="max-width:100%;border-radius:12px"/>`;
+  }
+
+  document.getElementById('doc-view-title').textContent=doc.name;
+  openModal('doc-view-modal');
+}
+
+function renderDocuments(){
+  ['rc','ins','puc','lic'].forEach(type=>{
+    const key=`${state.currentVehicleId}_${type}`;
+    const card=document.getElementById(`doc-card-${type}`);
+    const status=document.getElementById(`doc-status-${type}`);
+    const actions=document.getElementById(`doc-actions-${type}`);
+    const doc=state.docs[key];
+
+    if(doc){
+      card.classList.add('has-file');
+      status.textContent=doc.name;
+      status.style.color='var(--green)';
+      actions.innerHTML=`
+        <button class="btn btn-primary btn-sm" onclick="viewDoc('${type}')"><i class="fa-solid fa-eye"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="triggerDocUpload('${type}')"><i class="fa-solid fa-arrows-rotate"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDoc('${type}')"><i class="fa-solid fa-trash"></i></button>`;
+    }else{
+      card.classList.remove('has-file');
+      status.textContent='Not Uploaded';
+      status.style.color='var(--text-muted)';
+      actions.innerHTML=`<button class="btn btn-primary btn-sm" onclick="triggerDocUpload('${type}')">Upload</button>`;
+    }
+  });
+}
+
+/* ---------------- HELPERS ---------------- */
+function escapeHtml(value){
+  return String(value??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(value){return escapeHtml(value)}
+
+/* ---------------- EVENTS / START ---------------- */
+document.getElementById('login-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  doLogin();
+});
+
+document.getElementById('register-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  doRegister();
+});
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')closeAllModals();
+});
+
+loadTheme();
+
+if(state.currentUser){
+  initDashboard();
+}else{
+  showLogin();
+}
+</script>
+</body>
+</html>
